@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+
+        html, body {
+            width:  100%;
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            padding: 0;
+            
+        }
+
+        #c {
+            border: red solid 2px;
+            width: 100%;
+            height: 90%;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        #download {
+            font-size: large;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="c">
+
+    </canvas>
+    <a id="download" href="#" download="canvas.png">pobierz obraz</a>
+    <script>
+        
+        const canvas = document.getElementById("c");
+        const ctx = canvas.getContext("2d");
+        const cvDownload = document.getElementById("download");
+
+        let x, y, off;
+        let mouseX, mouseY;
+        let deltaX, deltaY;
+        let col = 0;
+        let row = 0;
+        let turn = 1;
+        let canvInf;
+        let positions;
+
+        const blacktile = '#000000';
+        const yellowtile = '#ffff00';
+        //---------------------------------------
+        window.addEventListener('load', (e) => {
+            setValues();
+            drawTiles();
+            drawImg('img/standards.png');
+            setPosition(2, 2);
+            drawX(whichcolor());
+            setPosition(3, 3);
+            drawO(whichcolor());
+
+
+        }); 
+        window.addEventListener('resize', (e) => {
+            setValues();
+            drawTiles();
+            drawImg('img/standards.png');
+            setPosition(2, 2);
+            drawX(whichcolor());
+            setPosition(3, 3);
+            drawO(whichcolor());
+
+        });
+        canvas.addEventListener('click', (e) =>{
+            getCursorPosition(canvas, e);
+            correctPosition(mouseX, mouseY);
+            if(col >= 0){
+                if(turn%2 != 0) drawX(whichcolor());
+                else drawO(whichcolor());
+                turn++;
+            }
+
+        });
+        cvDownload.addEventListener('click',  (el) =>{
+            //CORC zezwala tylko na model HTTP lub HTTPS, więc nie zadziała dla pliku z lokalnego dysku.
+            //Bez zdjęcia canvas pobierze się bez problemu, ale dla wersji ze zdjęciem należy użyć serwera
+            if(window.navigator.msSaveBlob){
+                window.navigator.msSaveBlob(canvas.msToBlob(), "canvas.png");
+            } else {
+                cvDownload.href = canvas.toDataURL();
+            }
+        });
+        //---------------------------------------
+        function getCursorPosition(canvas, e) {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = event.clientX - rect.left;
+            mouseY = event.clientY - rect.top;
+            console.log("mousex "+mouseX, " mousey"+mouseY, " x "+x, " y "+y, " deltaX "+deltaX, " deltaY "+deltaY );
+        }
+
+        function setPosition(tcol, trow){
+            col = tcol-1;
+            row = trow-1;
+        }
+        function setValues(){
+            canvas.height = window.innerHeight;
+            canvas.width = window.innerWidth;
+            x = canvas.width / 2;
+            y = canvas.height;
+            off = 25%x
+            deltaX = x / 3;
+            deltaY = y / 3;
+            positions = [
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0]
+            ];
+        }
+
+        function drawTiles(){
+            for(let i=0; i<3; i++){
+            for(let j=0; j<3; j++){
+                ctx.fillStyle = (i+j)%2 == 0 ? blacktile : yellowtile;
+                ctx.fillRect(
+                    deltaX + deltaX * (i - 1),
+                    deltaY + deltaY * (j - 1),
+                    deltaX,
+                    deltaY
+                )
+            }
+        }
+        }
+        function correctPosition(tx, ty){
+            if(tx > x) col = -1;
+            else if(x-tx < deltaX ) col = 2;
+            else if(x-tx > deltaX && x-tx < deltaX*2 ) col = 1;
+            else if(x-tx > deltaX*2) col = 0;
+
+            if(y-ty < deltaY) row = 2;
+            else if(y-ty > deltaY && y-ty < deltaY*2 ) row = 1;
+            else if(y-ty > deltaY*2) row = 0;
+        }
+
+        function drawX(color){
+            if(positions[col][row] == 0){
+            ctx.beginPath();
+            ctx.moveTo(col*deltaX+off, row*deltaY+off);
+            ctx.lineTo(((col+1)*deltaX)-off, ((row+1)*deltaY)-off);
+            if(color == 1) ctx.strokeStyle = yellowtile;
+            else ctx.strokeStyle = blacktile;
+            ctx.lineWidth = 10;
+            ctx.stroke();
+
+            ctx.moveTo((col+1)*deltaX-off, row*deltaY+off);
+            ctx.lineTo((col*deltaX)+off, ((row+1)*deltaY)-off);
+            if(color == 1) ctx.strokeStyle = yellowtile;
+            else ctx.strokeStyle = blacktile;
+            ctx.lineWidth = 10;
+            ctx.stroke();
+            ctx.closePath();
+            positions[col][row] = 1;
+            }
+        }
+
+        function drawO(color){
+            if(positions[col][row] == 0){
+            ctx.beginPath();
+            ctx.arc((col+1)*deltaX-deltaX/2, (row+1)*deltaY-deltaY/2 , (deltaX+deltaY)/5.5, 0, 2 * Math.PI);
+            if(color == 1) ctx.strokeStyle = yellowtile;
+            else ctx.strokeStyle = blacktile;
+            ctx.lineWidth = 5;
+            ctx.stroke();
+            ctx.closePath();
+            positions[col][row] = 1;
+            }
+        }
+        function whichcolor(){
+            if((col+1)%2 !=0 && (row+1)%2 != 0) return 1;
+            else if(col+1 == 2 && row+1 == 2) return 1;
+            else return 0;
+        }
+
+        function drawImg(src){
+            img = new Image();
+            img.src = src
+            img.onload = () =>{
+                ctx.drawImage(img, x, 0, x, y)
+            }
+        }
+    </script>
+</body>
+</html>
